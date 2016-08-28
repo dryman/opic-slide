@@ -1,0 +1,234 @@
+#+TITLE: OPIC (Object Persistence in C)
+#+AUTHOR: Felix Chern (dryman)
+#+REVEAL_THEME: white
+
+* About Me
+- Felix Chern, Software Engineer at Google (2016)
+- OpenX, Big Data Engineering tech lead (2014-2016)
+- SupplyFrame, Big Data Engineer (2013-2014)
+- NTU ME bachelor degree (2011)
+
+* What is OPIC?
+- Vision: redefine big data industry
+- Strategy:
+  - Scalable, off-memory data structures
+  - Complexity of O(log(N)) to compete with O(Nlog(N)) platforms
+- Applications: databases, search engines, all super scale data services (ex: google map)
+
+* Background
+
+** Data structures
+- Reduces complexities of some predefined queries or operations
+  - index -> data (array)
+  - key -> value (map)
+  - key -> existance of key (set)
+  - enqueue, dequeue
+- Usually implemented in memory
+
+** Big data
+- Almost all algorithms are based on sorting
+  - Nlog(N) total CPU time (technically ~N/mlog(N/m), m is number of machines)
+  - Includes hadoop, spark
+- Sorting is not the most effcient algorithm for ALL queries
+  - Look up data
+  - Join
+- Computing time: minutes to days
+
+** Off-memory data structures
+- Database indexes
+  - btree
+  - hash table
+  - primary key, foreign key
+- Search engine indexes
+  - suffix tree, suffix array
+- Usually computes in sub-seconds
+- Every data structure is application specific
+
+* Enter OPIC
+- Write data structures in object oriented model
+  - RB tree
+  - BTree
+  - Hash table
+  - Graph
+- All data structures can be serialized to disk or network
+- Ideal case: dump a big chunk of memory to disk and restore it back
+
+* Challenges
+- In memory data structures are presented by pointers
+- How do we manage pointers off-memory?
+
+* Pointer categories
+Imagine we have a managed memory that we can serialize.
+There are three types of pointers that we need to handle:
+- Internal references in managed memory
+- In-bound: points into the managed memory
+- Out-bound: points to external addresses
+
+** Internal ref & in-bound
+- Turns out internal reference and in-bound pointers are similar
+- serialize:
+  - pointer -> reference (valid off memory representation, discuss later)
+- deserialize:
+  - reference -> pointer
+
+** Out-bound
+- Depends on what the pointer points to
+- Example:
+  - pointing to in-memory object (X)
+  - function pointer (Hard)
+  - pointing to another managed memory
+  - pointing to class type (will discuss later)
+- Generally hard, avoid as much as possible
+
+* Internal reference and in-bound pointers
+
+** Concept
+- Objects with same type are stored in one (logical) array
+- Reference := type id + offset in array
+- Typed logical arrays are managed by a memory manager
+- Each memory manager can bulk serialize to disk and restore back
+- A program might maintain multiple memory manager
+
+** Memory manager (1)
+- typed logical array
+  - type info: type name, size, etc.
+  - type slots
+    - Each slot is sizeof(object) * N
+    - When slot is full, create new slot of 2N
+    - free memory := put object address into a priority queue
+    - alloc :=
+      1. find address in priority queue
+      2. if not found, find new space in slot
+
+** Memory manager (2)
+- types are stored in type-map
+- also maintain a map of pointer -> type slot
+  - so that we can transfer a pointer to reference
+
+* Out-bound pointers
+- Can we eliminate all out-bound pointers?
+- No. We need it to represent the type of an object
+
+** Object type implementaions in different languages
+- C++: vtable. number of pointers to vtable is implementation defined
+- Rust: trait pointers. Hard to gather
+- OCaml: JIT & compiled runtime has different form of vtable (?). Garbage collected memory is also hard to serialize.
+
+* Build our own OO in C
+
+** Why?
+- Build our own vtable runtime is easier than hacking other language's runtime
+- Learn from other language, make it better
+
+* OO system design
+- Generic type system (e.g. ~Map<String, Long>~)
+- Runtime compose instead of static compose (C++ template is static compose)
+  - Smaller binary and memory footprint
+
+** Generic type
+
+- Example in java:
+
+#+BEGIN_SRC java
+class Map<WritableComparable> {
+  write(WritableComparable data, DataOutput out) {
+    data.write(out); // write is defined in WritableComparable interface
+  }
+}
+#+END_SRC
+
+- Container object can call methods defined in generic interface
+- Container do not need to know the implementation detail of ~data.write()~
+
+** Runtime compose vs Static compose
+- C++ is statically compose (template)
+  - Template only lives in header
+  - Duplicates binary for each composed types
+  - Hard to create shared libraries for containers
+- Hence we choose runtime composed objects
+  - more runtime danger
+  - May be solved by creating a new language like vala
+
+* OPIC OO system
+
+** Interface based OO system
+- Define interfaces
+- Define a class that implements one or more interfaces
+- Each class has an global class object
+  - global class object direct the interface methods to real implementation
+- Object of same type has a ISA pointer points to the same class object
+
+** TODO use ArrayList as an example
+#+BEGIN_SRC dot
+
+#+END_SRC
+
+** generic function
+- Implement ~OPObject* li_get(OPObject* list, uint64_t index)~
+- list is a generic list, could be array list, linked list, etc.
+
+1. Get ~list->ISA~, unique pointer for each class
+2. Use ~list->ISA~ as a cache key to lookup function pointer
+3. If the function pointer is found, execute ~fp(list, uint64_t index)~
+4. If cache miss,
+  - traverse through ISA traits and find the function pointer,
+  - store ISA and function pointer to cache (C11 atomic store)
+  - execute the function pointer
+
+* Integrate OPIC OO system with serialization
+** Serializing:
+- Each object has one out-bound pointer (ISA)
+- Serializing steps
+  - write type header of the typed array
+    - type name
+    - total size of the typed array
+  - Merge multiple slot to one array
+  - Convert internal pointers to references
+  - Write the array to disk
+** deserializing
+- Read the type info from type header
+- Find the type ISA in global type map
+- From the type ISA we know the size of the object
+- For each object
+  - Fill the ISA pointer
+  - convert references to pointers
+
+* Final notes
+
+** trade-offs in design (1)
+- No inheritance, even though it could be implemented
+  - Enforce static type checking (no impl for interface => complie fail)
+- Use gcc extensions extensively
+  - ~__attribute__((constructor))~: register class object to global map before main
+  - ~__attribute__(aligned(256))~: align address so we can store some extra flags in the pointers
+  - SIMD vector types: Way easier to use than assemblies
+  - All the features above is supported by gcc & clang
+** trade-offs in design (2)
+- Only support 64bit machines, may limit to =x86_64=
+  - pointer size varies on different architectures
+  - too much work to support different size of pointers
+    - object size changes
+    - reference may look different
+    - 64bit->32bit may cause overflow
+  - Big data processing machines are all =x86_64=
+
+* Future challenges and road map
+- concurrent memory manager (C11 atomic)
+- cross memory manager reference
+- LRU cache for memory managers
+- compressed memory manager
+- primitive types compression (may prioritize)
+- distributed computing design (may use consistent hasing intensively)
+- distributed data store design
+
+* Road map2 (nice to have)
+- Implement a mysql storage engine based on OPIC
+- Distributed OLAP prototype.
+- Software transactional memory + durability on data structures
+  - WAL for limited set of data structure operations is possible
+- Prototype NoSQL DB like LevelDB/RocksDB
+- Durable program state?
+  - Browser JS state serialized and off-load to memory or compressed
+  - Smaller memory footprint for browsers
+
+* Thank you
