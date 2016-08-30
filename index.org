@@ -9,6 +9,8 @@
 - NTU ME bachelor degree (2011)
 
 * What is OPIC?
+- Object Persistance in C
+  - C objects that can be stored to disk, or transfer over network.
 - Vision: redefine big data industry
 - Strategy:
   - Scalable, off-memory data structures
@@ -18,6 +20,7 @@
 * Background
 
 ** Data structures
+- Computer Science fundamentals
 - Reduces complexities of some predefined queries or operations
   - index -> data (array)
   - key -> value (map)
@@ -28,9 +31,9 @@
 ** Big data
 - Almost all algorithms are based on sorting
   - Nlog(N) total CPU time (technically ~N/mlog(N/m), m is number of machines)
-  - Includes hadoop, spark
-- Sorting is not the most effcient algorithm for ALL queries
-  - Look up data
+  - Ex: hadoop, spark
+- Sorting is not the most effcient algorithm for ALL computing problems
+  - Look up and/or search data
   - Join
 - Computing time: minutes to days
 
@@ -45,12 +48,15 @@
 - Every data structure is application specific
 
 * Enter OPIC
-- Write data structures in object oriented model
+- Write general purpose data structures
   - RB tree
   - BTree
   - Hash table
   - Graph
 - All data structures can be serialized to disk or network
+- Compare to databases:
+  - Off-memory data structures are not application specific.
+  - Database, search engine, machine learning, etc. all share the same abstraction.
 - Ideal case: dump a big chunk of memory to disk and restore it back
 
 * Challenges
@@ -158,18 +164,49 @@ class Map<WritableComparable> {
   - global class object direct the interface methods to real implementation
 - Object of same type has a ISA pointer points to the same class object
 
-** TODO use ArrayList as an example
-#+BEGIN_SRC dot
-
+* Example: LinkedList
+** Interfaces: Collection, List
+- Collection:
+  - ~bool coll_add(OPObject* collection, OPGeneric element)~
+  - ~bool coll_isEmpty(OPObject* collection)~
+- List:
+  - ~OPGeneric li_get(OPObject* list, size_t index)~
+  - ~bool li_insert(OPObject* list, size_t index, OPGeneric element)~
+** LinkedList Class
+- Declare class object in header (extern)
+- Define class object in C file:
+#+BEGIN_SRC C
+// just pseudo code
+struct OPLinkedList_KLASS
+{
+  const char* const classname = "OPLinkedList";
+  const size_t size = 10;
+  TypeClass** traits; // points to list of interface instances
+}
 #+END_SRC
+- Implements
+  - ~bool LinkedList_coll_add(OPObject* collection, OPGeneric element)~
+  - ~bool LinkedList_coll_isEmpty(OPObject* collection)~
+  - ~OPGeneric LinkedList_li_get(OPObject* list, size_t index)~
+  - ~bool LinkedList_li_insert(OPObject* list, size_t index, OPGeneric element)~
 
-** generic function
-- Implement ~OPObject* li_get(OPObject* list, uint64_t index)~
+** LinkedList Class (cont.)
+- Before entering main:
+- Create ~Collection~ typeclass(interface) *object*
+  - Add function pointer to these methods:
+    - ~bool LinkedList_coll_add(OPObject* collection, OPGeneric element)~
+    - ~bool LinkedList_coll_isEmpty(OPObject* collection)~
+  - Add the collection typeclass object to ~OPLinkedList_KLASS.traits~
+- Do the same for ~List~ typeclass.
+- All the above are wrapped in C Macros.
+
+* generic function
+- Implementation of ~OPGeneric li_get(OPObject* list, size_t index)~
 - list is a generic list, could be array list, linked list, etc.
 
 1. Get ~list->ISA~, unique pointer for each class
 2. Use ~list->ISA~ as a cache key to lookup function pointer
-3. If the function pointer is found, execute ~fp(list, uint64_t index)~
+3. If the function pointer is found, execute ~fp(list, size_t index)~
 4. If cache miss,
   - traverse through ISA traits and find the function pointer,
   - store ISA and function pointer to cache (C11 atomic store)
@@ -221,7 +258,7 @@ class Map<WritableComparable> {
 - distributed computing design (may use consistent hasing intensively)
 - distributed data store design
 
-* Road map2 (nice to have)
+* Road map 2 (nice to have)
 - Implement a mysql storage engine based on OPIC
 - Distributed OLAP prototype.
 - Software transactional memory + durability on data structures
