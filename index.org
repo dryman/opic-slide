@@ -116,11 +116,35 @@ There are three types of pointers that we need to handle:
 #+BEGIN_SRC dot :file img/memory_manager.png :exports results
 digraph {
   node [shape=record];
-    struct1 [label="<f0> left|<f1> mid&#92; dle|<f2> right"];
-    struct2 [label="<f0> one|<f1> two"];
-    struct3 [label="hello&#92;nworld |{ b |{c|<here> d|e}| f}| g | h"];
-    struct1:f1 -> struct2:f0;
-    struct1:f2 -> struct3:here;
+pool [label="PMPool"];
+struct1 [label="{<slot> PMSlot|{<f1> pool| size | <next> next}}|\
+{{data | data | data | data | ...| data}|{priority queue for recycled data}}"];
+struct2 [label="{<slot> PMSlot|{<f1> pool| size | <next> next}}|\
+{{data | data | data | data | ...*2 | data}|{priority queue for recycled data}}"];
+null_node1 [shape=plaintext, label="NULL"];
+manager [label="PMMemoryManager"];
+typemap [label="TypeMap\n map type to alloc pool"];
+pool2 [label="PMPool"];
+struct3 [label="{<slot> PMSlot|{<f1> pool| size | <next> next}}|\
+{{data | data | data | data | ... | data}|{priority queue for recycled data}}"];
+null_node2 [shape=plaintext, label="NULL"];
+ptrmap [label="PointerMap\n map pointer address to slot"];
+
+manager -> typemap;
+manager -> ptrmap;
+typemap->pool;
+typemap->pool2;
+pool -> struct1:slot;
+struct1:f1 -> pool;
+struct2:f1 -> pool;
+struct1:next -> struct2:slot;
+struct2:next -> null_node1;
+pool2->struct3:slot;
+struct3:f1 -> pool2;
+struct3:next -> null_node2;
+//ptrmap -> struct1:slot;
+//ptrmap -> struct2:slot;
+//ptrmap -> struct3:slot;
 }
 #+END_SRC
 
@@ -183,15 +207,19 @@ class Map<WritableComparable> {
 * Example: LinkedList
 ** Interfaces: Collection, List
 - Collection:
-  - ~bool coll_add(OPObject* collection, OPGeneric element)~
-  - ~bool coll_isEmpty(OPObject* collection)~
+#+BEGIN_SRC c
+bool coll_add(OPObject* collection, OPGeneric element);
+bool coll_isEmpty(OPObject* collection);
+#+END_SRC
 - List:
-  - ~OPGeneric li_get(OPObject* list, size_t index)~
-  - ~bool li_insert(OPObject* list, size_t index, OPGeneric element)~
+#+BEGIN_SRC c
+OPGeneric li_get(OPObject* list, size_t index);
+bool li_insert(OPObject* list, size_t index, OPGeneric element);
+#+END_SRC
 ** LinkedList Class
 - Declare class object in header (extern)
 - Define class object in C file:
-#+BEGIN_SRC C
+#+BEGIN_SRC c
 // just pseudo code
 struct OPLinkedList_KLASS
 {
@@ -201,17 +229,21 @@ struct OPLinkedList_KLASS
 }
 #+END_SRC
 - Implements
-  - ~bool LinkedList_coll_add(OPObject* collection, OPGeneric element)~
-  - ~bool LinkedList_coll_isEmpty(OPObject* collection)~
-  - ~OPGeneric LinkedList_li_get(OPObject* list, size_t index)~
-  - ~bool LinkedList_li_insert(OPObject* list, size_t index, OPGeneric element)~
+#+BEGIN_SRC c
+bool LinkedList_coll_add(OPObject* collection, OPGeneric element);
+bool LinkedList_coll_isEmpty(OPObject* collection);
+OPGeneric LinkedList_li_get(OPObject* list, size_t index);
+bool LinkedList_li_insert(OPObject* list, size_t index, OPGeneric element);
+#+END_SRC
 
 ** LinkedList Class (cont.)
 - Before entering main:
 - Create ~Collection~ typeclass(interface) *object*
   - Add function pointer to these methods:
-    - ~bool LinkedList_coll_add(OPObject* collection, OPGeneric element)~
-    - ~bool LinkedList_coll_isEmpty(OPObject* collection)~
+#+BEGIN_SRC c
+bool LinkedList_coll_add(OPObject* collection, OPGeneric element);
+bool LinkedList_coll_isEmpty(OPObject* collection);
+#+END_SRC
   - Add the collection typeclass object to ~OPLinkedList_KLASS.traits~
 - Do the same for ~List~ typeclass.
 - All the above are wrapped in C Macros.
