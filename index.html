@@ -26,7 +26,7 @@
 <body>
 <div class="reveal">
 <div class="slides">
-<section id="sec-title-slide"><h1 class="title">OPIC (Object Persistence in C)</h1><h2 class="author">Felix Chern (dryman)</h2><p class="date">Created: 2016-08-30 Tue 23:04</p>
+<section id="sec-title-slide"><h1 class="title">OPIC (Object Persistence in C)</h1><h2 class="author">Felix Chern (dryman)</h2><p class="date">Created: 2016-09-02 Fri 09:31</p>
 </section>
 <section id="table-of-contents">
 <div id="table-of-contents">
@@ -79,29 +79,33 @@
 <li><a href="#/slide-orgheadline24">11.1. Interface based OO system</a></li>
 </ul>
 </li>
-<li><a href="#/slide-orgheadline29">12. Example: LinkedList</a>
+<li><a href="#/slide-orgheadline29">12. Example: Linked List</a>
 <ul>
 <li><a href="#/slide-orgheadline26">12.1. Interfaces: Collection, List</a></li>
 <li><a href="#/slide-orgheadline27">12.2. LinkedList Class</a></li>
 <li><a href="#/slide-orgheadline28">12.3. LinkedList Class (cont.)</a></li>
 </ul>
 </li>
-<li><a href="#/slide-orgheadline30">13. generic function</a></li>
-<li><a href="#/slide-orgheadline33">14. Integrate OPIC OO system with serialization</a>
+<li><a href="#/slide-orgheadline31">13. Generic Function in C (1)</a>
 <ul>
-<li><a href="#/slide-orgheadline31">14.1. Serializing:</a></li>
-<li><a href="#/slide-orgheadline32">14.2. deserializing</a></li>
+<li><a href="#/slide-orgheadline30">13.1. Generic Function in C (2)</a></li>
 </ul>
 </li>
-<li><a href="#/slide-orgheadline36">15. Final notes</a>
+<li><a href="#/slide-orgheadline34">14. Integrate OPIC OO system with serialization</a>
 <ul>
-<li><a href="#/slide-orgheadline34">15.1. trade-offs in design (1)</a></li>
-<li><a href="#/slide-orgheadline35">15.2. trade-offs in design (2)</a></li>
+<li><a href="#/slide-orgheadline32">14.1. Serializing:</a></li>
+<li><a href="#/slide-orgheadline33">14.2. deserializing</a></li>
 </ul>
 </li>
-<li><a href="#/slide-orgheadline37">16. Future challenges and road map</a></li>
-<li><a href="#/slide-orgheadline38">17. Road map 2 (nice to have)</a></li>
-<li><a href="#/slide-orgheadline39">18. Thank you</a></li>
+<li><a href="#/slide-orgheadline37">15. Final notes</a>
+<ul>
+<li><a href="#/slide-orgheadline35">15.1. trade-offs in design (1)</a></li>
+<li><a href="#/slide-orgheadline36">15.2. trade-offs in design (2)</a></li>
+</ul>
+</li>
+<li><a href="#/slide-orgheadline38">16. Future challenges and roadmap</a></li>
+<li><a href="#/slide-orgheadline39">17. Roadmap 2 (nice to have)</a></li>
+<li><a href="#/slide-orgheadline40">18. Thank you</a></li>
 </ul>
 </div>
 </div>
@@ -126,7 +130,7 @@
 <ul>
 <li>Object Persistance in C
 <ul>
-<li>C objects that can be stored to disk, or transfer over network.</li>
+<li>C objects that can be stored to disk, or transferred over network.</li>
 
 </ul></li>
 <li>Vision: redefine big data industry</li>
@@ -136,7 +140,7 @@
 <li>Complexity of O(log(N)) to compete with O(Nlog(N)) platforms</li>
 
 </ul></li>
-<li>Applications: databases, search engines, all super scale data services (ex: google map)</li>
+<li>Applications: databases, search engines, all super scale data services (e.g. google map)</li>
 
 </ul>
 
@@ -151,7 +155,7 @@
 <h3 id="orgheadline3"><span class="section-number-3">3.1</span> Data structures</h3>
 <ul>
 <li>Computer Science fundamentals</li>
-<li>Reduces complexities of some predefined queries or operations
+<li>Reduces complexity of some predefined queries or operations
 <ul>
 <li>index -&gt; data (array)</li>
 <li>key -&gt; value (map)</li>
@@ -167,16 +171,17 @@
 <section id="slide-orgheadline4">
 <h3 id="orgheadline4"><span class="section-number-3">3.2</span> Big data</h3>
 <ul>
-<li>Almost all algorithms are based on sorting
+<li>Large scale data processing algorithm is based on sorting
 <ul>
-<li>Nlog(N) total CPU time (technically ~N/mlog(N/m), m is number of machines)</li>
-<li>Ex: hadoop, spark</li>
+<li>Map Reduce is Map O(N), shuffle (merge sort) O(Nlog(N)), and reduce O(N) total CPU time</li>
+<li>Hadoop and Spark are both based on merge sort.</li>
 
 </ul></li>
-<li>Sorting is not the most effcient algorithm for ALL computing problems
+<li>Sorting may not suit for
 <ul>
-<li>Look up and/or search data</li>
-<li>Join</li>
+<li>Fast look up and search by index, join by index etc.</li>
+<li>OLAP application (slice and dice)</li>
+<li>Full text search, information retrieval, large scale machine learning</li>
 
 </ul></li>
 <li>Computing time: minutes to days</li>
@@ -213,7 +218,7 @@
 <li>Write general purpose data structures
 <ul>
 <li>RB tree</li>
-<li>BTree</li>
+<li>B-tree</li>
 <li>Hash table</li>
 <li>Graph</li>
 
@@ -302,7 +307,7 @@ There are three types of pointers that we need to handle:
 <h3 id="orgheadline12"><span class="section-number-3">7.1</span> Concept</h3>
 <ul>
 <li>Objects with same type are stored in one (logical) array</li>
-<li>Reference := type id + offset in array</li>
+<li>Reference defined as "type id + offset in array"</li>
 <li>Typed logical arrays are managed by a memory manager</li>
 <li>Each memory manager can bulk serialize to disk and restore back</li>
 <li>A program might maintain multiple memory manager</li>
@@ -419,7 +424,8 @@ There are three types of pointers that we need to handle:
 
 <pre  class="src src-java"><span style="color: #a020f0;">class</span> <span style="color: #228b22;">Map</span>&lt;<span style="color: #228b22;">WritableComparable</span>&gt; {
   <span style="color: #0000ff;">write</span>(<span style="color: #228b22;">WritableComparable</span> <span style="color: #a0522d;">data</span>, <span style="color: #228b22;">DataOutput</span> <span style="color: #a0522d;">out</span>) {
-    data.write(out); <span style="color: #b22222;">// </span><span style="color: #b22222;">write is defined in WritableComparable interface</span>
+    data.write(out);
+    <span style="color: #b22222;">// </span><span style="color: #b22222;">write is defined in WritableComparable interface</span>
   }
 }
 </pre>
@@ -476,7 +482,7 @@ There are three types of pointers that we need to handle:
 </section>
 <section>
 <section id="slide-orgheadline29">
-<h2 id="orgheadline29"><span class="section-number-2">12</span> Example: LinkedList</h2>
+<h2 id="orgheadline29"><span class="section-number-2">12</span> Example: Linked List</h2>
 <div class="outline-text-2" id="text-12">
 </div></section>
 <section id="slide-orgheadline26">
@@ -516,7 +522,8 @@ There are three types of pointers that we need to handle:
 {
   <span style="color: #a020f0;">const</span> <span style="color: #228b22;">char</span>* <span style="color: #a020f0;">const</span> <span style="color: #a0522d;">classname</span> = <span style="color: #8b2252;">"OPLinkedList"</span>;
   <span style="color: #a020f0;">const</span> <span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">size</span> = 10;
-  <span style="color: #228b22;">TypeClass</span>** <span style="color: #a0522d;">traits</span>; <span style="color: #b22222;">// </span><span style="color: #b22222;">points to list of interface instances</span>
+  <span style="color: #228b22;">TypeClass</span>** <span style="color: #a0522d;">traits</span>;
+  <span style="color: #b22222;">// </span><span style="color: #b22222;">points to list of interface instances</span>
 }
 </pre>
 </div>
@@ -564,10 +571,39 @@ There are three types of pointers that we need to handle:
 </section>
 </section>
 <section>
-<section id="slide-orgheadline30">
-<h2 id="orgheadline30"><span class="section-number-2">13</span> generic function</h2>
+<section id="slide-orgheadline31">
+<h2 id="orgheadline31"><span class="section-number-2">13</span> Generic Function in C (1)</h2>
 <ul>
-<li>Implementation of <code>OPGeneric li_get(OPObject* list, size_t index)</code></li>
+<li>Goal: a C function that behave differently by object passed in.</li>
+
+</ul>
+<div class="org-src-container">
+
+<pre  class="src src-C"><span style="color: #228b22;">OPGeneric</span> <span style="color: #0000ff;">li_get</span>(<span style="color: #228b22;">OPObject</span>* <span style="color: #a0522d;">obj</span>, <span style="color: #228b22;">size_t</span> <span style="color: #a0522d;">index</span>);
+</pre>
+</div>
+<ul>
+<li><code>li_get</code> on linked list takes O(N)</li>
+<li><code>li_get</code> on array list takes O(1)</li>
+<li>Problem: C does not has method override</li>
+
+</ul>
+
+</section>
+<section id="slide-orgheadline30">
+<h3 id="orgheadline30"><span class="section-number-3">13.1</span> Generic Function in C (2)</h3>
+<p>
+Initial design
+</p>
+
+
+<div class="figure">
+<p><img src="img/generic_function.png" alt="generic_function.png" />
+</p>
+</div>
+
+<ul>
+<li>Implementation of</li>
 <li>list is a generic list, could be array list, linked list, etc.</li>
 
 <li>Get <code>list-&gt;ISA</code>, unique pointer for each class</li>
@@ -586,12 +622,12 @@ There are three types of pointers that we need to handle:
 </section>
 </section>
 <section>
-<section id="slide-orgheadline33">
-<h2 id="orgheadline33"><span class="section-number-2">14</span> Integrate OPIC OO system with serialization</h2>
+<section id="slide-orgheadline34">
+<h2 id="orgheadline34"><span class="section-number-2">14</span> Integrate OPIC OO system with serialization</h2>
 <div class="outline-text-2" id="text-14">
 </div></section>
-<section id="slide-orgheadline31">
-<h3 id="orgheadline31"><span class="section-number-3">14.1</span> Serializing:</h3>
+<section id="slide-orgheadline32">
+<h3 id="orgheadline32"><span class="section-number-3">14.1</span> Serializing:</h3>
 <ul>
 <li>Each object has one out-bound pointer (ISA)</li>
 <li>Serializing steps
@@ -610,8 +646,8 @@ There are three types of pointers that we need to handle:
 
 </ul>
 </section>
-<section id="slide-orgheadline32">
-<h3 id="orgheadline32"><span class="section-number-3">14.2</span> deserializing</h3>
+<section id="slide-orgheadline33">
+<h3 id="orgheadline33"><span class="section-number-3">14.2</span> deserializing</h3>
 <ul>
 <li>Read the type info from type header</li>
 <li>Find the type ISA in global type map</li>
@@ -628,12 +664,12 @@ There are three types of pointers that we need to handle:
 </section>
 </section>
 <section>
-<section id="slide-orgheadline36">
-<h2 id="orgheadline36"><span class="section-number-2">15</span> Final notes</h2>
+<section id="slide-orgheadline37">
+<h2 id="orgheadline37"><span class="section-number-2">15</span> Final notes</h2>
 <div class="outline-text-2" id="text-15">
 </div></section>
-<section id="slide-orgheadline34">
-<h3 id="orgheadline34"><span class="section-number-3">15.1</span> trade-offs in design (1)</h3>
+<section id="slide-orgheadline35">
+<h3 id="orgheadline35"><span class="section-number-3">15.1</span> trade-offs in design (1)</h3>
 <ul>
 <li>No inheritance, even though it could be implemented
 <ul>
@@ -651,8 +687,8 @@ There are three types of pointers that we need to handle:
 
 </ul>
 </section>
-<section id="slide-orgheadline35">
-<h3 id="orgheadline35"><span class="section-number-3">15.2</span> trade-offs in design (2)</h3>
+<section id="slide-orgheadline36">
+<h3 id="orgheadline36"><span class="section-number-3">15.2</span> trade-offs in design (2)</h3>
 <ul>
 <li>Only support 64bit machines, may limit to <code>x86_64</code>
 <ul>
@@ -673,8 +709,8 @@ There are three types of pointers that we need to handle:
 </section>
 </section>
 <section>
-<section id="slide-orgheadline37">
-<h2 id="orgheadline37"><span class="section-number-2">16</span> Future challenges and road map</h2>
+<section id="slide-orgheadline38">
+<h2 id="orgheadline38"><span class="section-number-2">16</span> Future challenges and roadmap</h2>
 <ul>
 <li>concurrent memory manager (C11 atomic)</li>
 <li>cross memory manager reference</li>
@@ -689,8 +725,8 @@ There are three types of pointers that we need to handle:
 </section>
 </section>
 <section>
-<section id="slide-orgheadline38">
-<h2 id="orgheadline38"><span class="section-number-2">17</span> Road map 2 (nice to have)</h2>
+<section id="slide-orgheadline39">
+<h2 id="orgheadline39"><span class="section-number-2">17</span> Roadmap 2 (nice to have)</h2>
 <ul>
 <li>Implement a mysql storage engine based on OPIC</li>
 <li>Distributed OLAP prototype.</li>
@@ -712,8 +748,8 @@ There are three types of pointers that we need to handle:
 </section>
 </section>
 <section>
-<section id="slide-orgheadline39">
-<h2 id="orgheadline39"><span class="section-number-2">18</span> Thank you</h2>
+<section id="slide-orgheadline40">
+<h2 id="orgheadline40"><span class="section-number-2">18</span> Thank you</h2>
 </section>
 </section>
 </div>

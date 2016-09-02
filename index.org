@@ -10,18 +10,18 @@
 
 * What is OPIC?
 - Object Persistance in C
-  - C objects that can be stored to disk, or transfer over network.
+  - C objects that can be stored to disk, or transferred over network.
 - Vision: redefine big data industry
 - Strategy:
   - Scalable, off-memory data structures
   - Complexity of O(log(N)) to compete with O(Nlog(N)) platforms
-- Applications: databases, search engines, all super scale data services (ex: google map)
+- Applications: databases, search engines, all super scale data services (e.g. google map)
 
 * Background
 
 ** Data structures
 - Computer Science fundamentals
-- Reduces complexities of some predefined queries or operations
+- Reduces complexity of some predefined queries or operations
   - index -> data (array)
   - key -> value (map)
   - key -> existance of key (set)
@@ -29,12 +29,13 @@
 - Usually implemented in memory
 
 ** Big data
-- Almost all algorithms are based on sorting
-  - Nlog(N) total CPU time (technically ~N/mlog(N/m), m is number of machines)
-  - Ex: hadoop, spark
-- Sorting is not the most effcient algorithm for ALL computing problems
-  - Look up and/or search data
-  - Join
+- Large scale data processing algorithm is based on sorting
+  - Map Reduce is Map O(N), shuffle (merge sort) O(Nlog(N)), and reduce O(N) total CPU time
+  - Hadoop and Spark are both based on merge sort.
+- Sorting may not suit for
+  - Fast look up and search by index, join by index etc.
+  - OLAP application (slice and dice)
+  - Full text search, information retrieval, large scale machine learning
 - Computing time: minutes to days
 
 ** Off-memory data structures
@@ -50,7 +51,7 @@
 * Enter OPIC
 - Write general purpose data structures
   - RB tree
-  - BTree
+  - B-tree
   - Hash table
   - Graph
 - All data structures can be serialized to disk or network
@@ -90,7 +91,7 @@ There are three types of pointers that we need to handle:
 
 ** Concept
 - Objects with same type are stored in one (logical) array
-- Reference := type id + offset in array
+- Reference defined as "type id + offset in array"
 - Typed logical arrays are managed by a memory manager
 - Each memory manager can bulk serialize to disk and restore back
 - A program might maintain multiple memory manager
@@ -178,7 +179,8 @@ struct3:next -> null_node2;
 #+BEGIN_SRC java
 class Map<WritableComparable> {
   write(WritableComparable data, DataOutput out) {
-    data.write(out); // write is defined in WritableComparable interface
+    data.write(out);
+    // write is defined in WritableComparable interface
   }
 }
 #+END_SRC
@@ -204,7 +206,7 @@ class Map<WritableComparable> {
   - global class object direct the interface methods to real implementation
 - Object of same type has a ISA pointer points to the same class object
 
-* Example: LinkedList
+* Example: Linked List
 ** Interfaces: Collection, List
 - Collection:
 #+BEGIN_SRC c
@@ -225,7 +227,8 @@ struct OPLinkedList_KLASS
 {
   const char* const classname = "OPLinkedList";
   const size_t size = 10;
-  TypeClass** traits; // points to list of interface instances
+  TypeClass** traits;
+  // points to list of interface instances
 }
 #+END_SRC
 - Implements
@@ -248,8 +251,51 @@ bool LinkedList_coll_isEmpty(OPObject* collection);
 - Do the same for ~List~ typeclass.
 - All the above are wrapped in C Macros.
 
-* generic function
-- Implementation of ~OPGeneric li_get(OPObject* list, size_t index)~
+* Generic Function in C (1)
+- Goal: a C function that behave differently by object passed in.
+#+BEGIN_SRC C
+OPGeneric li_get(OPObject* obj, size_t index);
+#+END_SRC
+- =li_get= on linked list takes O(N)
+- =li_get= on array list takes O(1)
+- Problem: C does not has method override
+
+** Generic Function in C (2)
+
+Initial design
+
+#+BEGIN_SRC dot :file img/generic_function.png :exports results
+digraph {
+ratio="fill";
+size=8;
+start[shape="box", style=rounded];
+input[shape="parallelogram", label="obj, other arguments"];
+trait[shape="box", label="TypeClass** t = obj->ISA->traits\nGet the first trait"];
+if_null[shape="diamond", label="if *t == NULL"];
+then_null[shape="box", style=rounded, label="assert no impl\nstop"];
+if_match[shape="diamond", label="if (*t)->name\nmatches \"List\""];
+match_then[shape="box", label="List* typeclass = (List)(*t)\ntype cast to get List definitions"];
+impl[shape="box", label="impl function = typeclass->method_name"];
+exec[shape="box", label="exec impl function", style=rounded];
+match_else[shape="box", label="t++"];
+
+start->input;
+input->trait;
+trait->if_null;
+if_null->then_null [label="True"];
+if_null->if_match [label="False"];
+if_match->match_then [label="True"];
+match_then->impl;
+impl->exec;
+if_match->match_else [label="False"];
+match_else->if_null;
+}
+#+END_SRC
+
+#+RESULTS:
+[[file:img/generic_function.png]]
+
+- Implementation of 
 - list is a generic list, could be array list, linked list, etc.
 
 1. Get ~list->ISA~, unique pointer for each class
@@ -297,7 +343,7 @@ bool LinkedList_coll_isEmpty(OPObject* collection);
     - 64bit->32bit may cause overflow
   - Big data processing machines are all =x86_64=
 
-* Future challenges and road map
+* Future challenges and roadmap
 - concurrent memory manager (C11 atomic)
 - cross memory manager reference
 - LRU cache for memory managers
@@ -306,7 +352,7 @@ bool LinkedList_coll_isEmpty(OPObject* collection);
 - distributed computing design (may use consistent hasing intensively)
 - distributed data store design
 
-* Road map 2 (nice to have)
+* Roadmap 2 (nice to have)
 - Implement a mysql storage engine based on OPIC
 - Distributed OLAP prototype.
 - Software transactional memory + durability on data structures
