@@ -1,6 +1,7 @@
 #+TITLE: OPIC (Object Persistence in C)
 #+AUTHOR: Felix Chern (dryman)
 #+REVEAL_THEME: white
+#+REVEAL_TRANS: linear
 
 * About Me
 - Felix Chern, Software Engineer at Google (2016)
