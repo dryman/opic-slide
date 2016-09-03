@@ -262,31 +262,26 @@ OPGeneric li_get(OPObject* obj, size_t index);
 
 ** Generic Function in C (2)
 
-Initial design
-
 #+BEGIN_SRC dot :file img/generic_function.png :exports results
 digraph {
 ratio="fill";
-size=8;
+size="10,6";
 start[shape="box", style=rounded];
-input[shape="parallelogram", label="obj, other arguments"];
 trait[shape="box", label="TypeClass** t = obj->ISA->traits\nGet the first trait"];
 if_null[shape="diamond", label="if *t == NULL"];
 then_null[shape="box", style=rounded, label="assert no impl\nstop"];
 if_match[shape="diamond", label="if (*t)->name\nmatches \"List\""];
-match_then[shape="box", label="List* typeclass = (List)(*t)\ntype cast to get List definitions"];
-impl[shape="box", label="impl function = typeclass->method_name"];
+match_then[shape="box", label="List* typeclass = (List)(*t)\n\
+impl function = typeclass->method_name"];
 exec[shape="box", label="exec impl function", style=rounded];
 match_else[shape="box", label="t++"];
 
-start->input;
-input->trait;
+start->trait;
 trait->if_null;
 if_null->then_null [label="True"];
 if_null->if_match [label="False"];
 if_match->match_then [label="True"];
-match_then->impl;
-impl->exec;
+match_then->exec;
 if_match->match_else [label="False"];
 match_else->if_null;
 }
@@ -294,6 +289,8 @@ match_else->if_null;
 
 #+RESULTS:
 [[file:img/generic_function.png]]
+
+** Generic Function in C (3)
 
 - Implementation of 
 - list is a generic list, could be array list, linked list, etc.
@@ -324,7 +321,7 @@ match_else->if_null;
   - Fill the ISA pointer
   - convert references to pointers
 
-* Final notes
+* Other notes
 
 ** trade-offs in design (1)
 - No inheritance, even though it could be implemented
@@ -352,7 +349,7 @@ match_else->if_null;
 - distributed computing design (may use consistent hasing intensively)
 - distributed data store design
 
-* Roadmap 2 (nice to have)
+** Roadmap 2 (nice to have)
 - Implement a mysql storage engine based on OPIC
 - Distributed OLAP prototype.
 - Software transactional memory + durability on data structures
